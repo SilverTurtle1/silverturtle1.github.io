@@ -105,6 +105,7 @@
   }
   .project-link{display:inline-block; margin-top:14px; font-size:13px; color:var(--gold); border-bottom:1px solid transparent;}
   .project-link:hover{border-bottom-color:var(--gold);}
+  .project-pending{display:inline-block; margin-top:14px; font-family:var(--mono); font-size:11px; color:var(--ink-faint); border:1px solid var(--hairline); padding:5px 10px; border-radius:2px; letter-spacing:0.04em;}
 
   /* SKILLS */
   .skills-grid{display:grid; grid-template-columns:repeat(3,1fr); gap:18px 30px;}
@@ -209,6 +210,20 @@
 
     <!-- EDIT ME: replace with your real projects, screenshots, and links -->
     <div class="project">
+      <div class="project-tag">DATA</div>
+      <div>
+        <h3>FINRA Off-Exchange Transactions Dashboard</h3>
+        <p>
+          A pipeline pulling FINRA short-interest and off-exchange transaction data on a
+          scheduled basis, with a Tableau front end for spotting shifts in positioning
+          across a watchlist.
+        </p>
+        <div class="stack"><span>Python</span><span>FINRA API</span><span>Tableau</span></div>
+        <a class="project-link" href="https://ssdata.onrender.com/" target="_blank" rel="noopener">View live app →</a>
+      </div>
+    </div>
+
+    <div class="project">
       <div class="project-tag">SIGNALS</div>
       <div>
         <h3>Options-Flow Signal Engine</h3>
@@ -218,20 +233,7 @@
           Ameritrade's thinkorswim platform for execution.
         </p>
         <div class="stack"><span>Python</span><span>thinkorswim API</span><span>Pandas</span></div>
-        <a class="project-link" href="#">View write-up / repo →</a>
-      </div>
-    </div>
-
-    <div class="project">
-      <div class="project-tag">DATA</div>
-      <div>
-        <h3>Short-Interest Tracking Dashboard</h3>
-        <p>
-          A pipeline pulling FINRA short-interest data on a scheduled basis, with a
-          Tableau front end for spotting shifts in positioning across a watchlist.
-        </p>
-        <div class="stack"><span>Python</span><span>FINRA API</span><span>Tableau</span></div>
-        <a class="project-link" href="#">View write-up / repo →</a>
+        <span class="project-pending">IN PROGRESS — LINK COMING SOON</span>
       </div>
     </div>
 
@@ -245,7 +247,7 @@
           product, but structured cleanly enough to extend.
         </p>
         <div class="stack"><span>Jupyter</span><span>D3.js</span><span>HTML/JS</span></div>
-        <a class="project-link" href="#">View write-up / repo →</a>
+        <span class="project-pending">IN PROGRESS — LINK COMING SOON</span>
       </div>
     </div>
   </div>
@@ -306,8 +308,8 @@
       <div class="contact-links">
         <!-- EDIT ME: your real contact details -->
         <a href="mailto:joshjmerritt1@gmail.com">Email</a>
-        <a href="#">LinkedIn</a>
-        <a href="#">GitHub</a>
+        <a href="https://www.linkedin.com/in/joshua-merritt-cso/" target="_blank" rel="noopener">LinkedIn</a>
+        <a href="https://github.com/SilverTurtle1" target="_blank" rel="noopener">GitHub</a>
       </div>
     </div>
   </div>
