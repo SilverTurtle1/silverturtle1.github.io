@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ES Futures Data — Case Study · Josh Merritt</title>
+<meta name="description" content="How I built a continuous ES futures dataset, and why the textbook roll date was wrong for my data.">
+<style>
+  :root{
+    --bg:#0E1116;
+    --bg-raised:#151A22;
+    --hairline:#252C38;
+    --ink:#EDEFF3;
+    --ink-dim:#8A93A3;
+    --ink-faint:#5A6272;
+    --gold:#C9A468;
+    --teal:#4FA9AE;
+    --serif: "Source Serif Pro", "Iowan Old Style", Georgia, serif;
+    --mono: "IBM Plex Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  *{box-sizing:border-box; margin:0; padding:0;}
+  html{scroll-behavior:smooth;}
+  @media (prefers-reduced-motion:reduce){ html{scroll-behavior:auto;} }
+  body{
+    background:var(--bg); color:var(--ink); font-family:var(--sans);
+    line-height:1.6; -webkit-font-smoothing:antialiased;
+  }
+  a{color:inherit; text-decoration:none;}
+  a:focus-visible{outline:2px solid var(--gold); outline-offset:3px;}
+  .wrap{max-width:920px; margin:0 auto; padding:0 28px;}
+
+  /* NAV */
+  nav{
+    position:sticky; top:0; z-index:20;
+    background:rgba(14,17,22,0.88); backdrop-filter:blur(8px);
+    border-bottom:1px solid var(--hairline);
+  }
+  nav .wrap{display:flex; justify-content:space-between; align-items:center; height:64px;}
+  .brand{font-family:var(--mono); font-size:14px; letter-spacing:0.04em; color:var(--gold);}
+  .navlinks{display:flex; gap:28px; font-size:14px; color:var(--ink-dim);}
+  .navlinks a:hover{color:var(--ink);}
+
+  /* HERO */
+  header.hero{padding:72px 0 0; border-bottom:1px solid var(--hairline);}
+  .crumb{font-family:var(--mono); font-size:12px; color:var(--ink-faint); margin-bottom:22px;}
+  .crumb a{color:var(--teal);}
+  .crumb a:hover{color:var(--ink);}
+  h1{
+    font-family:var(--serif); font-weight:600; font-size:clamp(32px,4.6vw,48px);
+    line-height:1.1; letter-spacing:-0.01em; max-width:20ch;
+  }
+  .hero-sub{margin-top:20px; font-size:18px; color:var(--ink-dim); max-width:60ch;}
+  .stack{display:flex; gap:8px; flex-wrap:wrap; margin-top:24px;}
+  .stack span{
+    font-family:var(--mono); font-size:11px; color:var(--ink-faint);
+    border:1px solid var(--hairline); padding:4px 9px; border-radius:2px;
+  }
+  .hero-actions{display:flex; gap:14px; margin-top:28px; flex-wrap:wrap;}
+  .btn{
+    font-family:var(--mono); font-size:13px; padding:11px 20px;
+    border:1px solid var(--hairline); border-radius:2px; letter-spacing:0.02em;
+    transition:border-color .15s, color .15s;
+  }
+  .btn-primary{background:var(--gold); color:#0E1116; border-color:var(--gold); font-weight:600;}
+  .btn-primary:hover{background:#d9b57c;}
+  .btn-ghost{color:var(--ink-dim);}
+  .btn-ghost:hover{border-color:var(--ink-dim); color:var(--ink);}
+
+  .ledger{
+    display:grid; grid-template-columns:repeat(4,1fr);
+    border-top:1px solid var(--hairline); margin-top:56px;
+  }
+  .ledger > div{padding:20px 24px; border-left:1px solid var(--hairline);}
+  .ledger > div:first-child{border-left:none;}
+  .ledger .figure{font-family:var(--mono); font-size:22px; color:var(--gold);}
+  .ledger .label{font-size:12px; color:var(--ink-faint); margin-top:6px; letter-spacing:0.02em;}
+
+  /* ARTICLE */
+  section{padding:56px 0; border-bottom:1px solid var(--hairline);}
+  section:last-of-type{border-bottom:none;}
+  h2{font-family:var(--serif); font-size:26px; font-weight:600; margin-bottom:20px; max-width:30ch;}
+  .prose{max-width:64ch;}
+  .prose p{font-size:17px; color:var(--ink-dim); margin-bottom:18px;}
+  .prose p:last-child{margin-bottom:0;}
+  .prose strong{color:var(--ink); font-weight:600;}
+  .prose a{color:var(--gold); border-bottom:1px solid rgba(201,164,104,.35);}
+  .prose a:hover{border-bottom-color:var(--gold);}
+
+  ol.steps{list-style:none; counter-reset:step; margin-top:8px;}
+  ol.steps li{
+    counter-increment:step; display:grid; grid-template-columns:44px 1fr; gap:16px;
+    padding:16px 0; border-top:1px solid var(--hairline); font-size:16px; color:var(--ink-dim);
+  }
+  ol.steps li:first-child{border-top:none;}
+  ol.steps li::before{content:counter(step, decimal-leading-zero); font-family:var(--mono); font-size:13px; color:var(--ink-faint); padding-top:3px;}
+  ol.steps strong{color:var(--ink); font-weight:600;}
+
+  /* ROLL WEEK — the one signature visual */
+  .rollweek{margin:32px 0 36px; border:1px solid var(--hairline); background:var(--bg-raised); border-radius:2px;}
+  .rollweek-head{padding:16px 20px; border-bottom:1px solid var(--hairline); font-size:13px; color:var(--ink-faint);}
+  .rollweek-head strong{color:var(--ink); font-weight:600;}
+  .days{display:grid; grid-template-columns:repeat(7,1fr);}
+  .day{padding:16px 14px 18px; border-left:1px solid var(--hairline); min-height:150px; position:relative;}
+  .day:first-child{border-left:none;}
+  .day .dname{font-family:var(--mono); font-size:12px; color:var(--ink-faint);}
+  .day .dnote{font-size:13px; color:var(--ink-dim); margin-top:10px; line-height:1.45;}
+  .day.weekend{background:repeating-linear-gradient(135deg, transparent 0 6px, rgba(37,44,56,.45) 6px 7px);}
+  .day.weekend .dnote{color:var(--ink-faint);}
+  .day.mark-textbook{box-shadow:inset 0 3px 0 var(--ink-faint);}
+  .day.mark-actual{box-shadow:inset 0 3px 0 var(--gold); background:rgba(201,164,104,.06);}
+  .day.mark-actual .dname{color:var(--gold);}
+  .day .tag{display:inline-block; margin-top:12px; font-family:var(--mono); font-size:11px; padding:3px 7px; border:1px solid var(--hairline); border-radius:2px; color:var(--ink-faint);}
+  .day.mark-actual .tag{border-color:rgba(201,164,104,.5); color:var(--gold);}
+  .rollweek-foot{padding:14px 20px; border-top:1px solid var(--hairline); font-size:13px; color:var(--ink-faint);}
+
+  /* DECISIONS + POWERS */
+  .rows{margin-top:8px;}
+  .row{display:grid; grid-template-columns:220px 1fr; gap:24px; padding:20px 0; border-top:1px solid var(--hairline);}
+  .row:first-child{border-top:none;}
+  .row h3{font-size:16px; font-weight:600; color:var(--ink);}
+  .row p{font-size:15px; color:var(--ink-dim); max-width:60ch;}
+  .row .where{display:block; margin-top:8px; font-family:var(--mono); font-size:12px; color:var(--ink-faint);}
+  .row a.where{color:var(--gold);}
+  .row a.where:hover{color:var(--ink);}
+  .note{margin-top:24px; font-size:15px; color:var(--ink-dim); max-width:64ch;}
+
+  footer{padding:36px 0; text-align:center; color:var(--ink-faint); font-size:12px; font-family:var(--mono); border-top:1px solid var(--hairline);}
+
+  @media (max-width:760px){
+    .days{grid-template-columns:1fr;}
+    .day{border-left:none; border-top:1px solid var(--hairline); min-height:0;}
+    .day:first-child{border-top:none;}
+    .day.mark-textbook{box-shadow:inset 3px 0 0 var(--ink-faint);}
+    .day.mark-actual{box-shadow:inset 3px 0 0 var(--gold);}
+    .row{grid-template-columns:1fr; gap:8px;}
+  }
+  @media (max-width:640px){
+    .navlinks{gap:18px;}
+    .ledger{grid-template-columns:repeat(2,1fr);}
+    .ledger > div:nth-child(3){border-left:none;}
+    .ledger > div:nth-child(n+3){border-top:1px solid var(--hairline);}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap">
+    <a class="brand" href="index.html">JOSH MERRITT</a>
+    <div class="navlinks">
+      <a href="index.html#projects">Projects</a>
+      <a href="https://github.com/SilverTurtle1/ESFuturesData" target="_blank" rel="noopener">Code</a>
+      <a href="index.html#contact">Contact</a>
+    </div>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="wrap">
+    <p class="crumb"><a href="index.html#projects">Projects</a> / Case study</p>
+    <h1>ES Futures Data: building the foundation every analysis depends on</h1>
+    <p class="hero-sub">
+      Every level I trade, and every strategy I test, starts from one dataset: a continuous,
+      minute-by-minute price history of E-mini S&amp;P 500 (ES) futures. Getting it right took
+      more judgment than code, and along the way the data contradicted one of the most widely
+      repeated rules in futures trading.
+    </p>
+    <div class="stack"><span>Python</span><span>pandas</span><span>PostgreSQL</span><span>REST API</span><span>Data validation</span></div>
+    <div class="hero-actions">
+      <a class="btn btn-primary" href="https://github.com/SilverTurtle1/ESFuturesData" target="_blank" rel="noopener">View the code</a>
+      <a class="btn btn-ghost" href="https://github.com/SilverTurtle1/ESFuturesData/blob/main/docs/DATA_PIPELINE.md" target="_blank" rel="noopener">Read the methodology</a>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="ledger">
+      <div><div class="figure">7</div><div class="label">contract rolls analyzed, Mar 2025 – Sep 2026</div></div>
+      <div><div class="figure">3–10%</div><div class="label">new contract's share of volume on the textbook roll day</div></div>
+      <div><div class="figure">+4 days</div><div class="label">when volume actually crossed over, in every quarter</div></div>
+      <div><div class="figure">50–68 pts</div><div class="label">price gap between contracts at each roll</div></div>
+    </div>
+  </div>
+</header>
+
+<main>
+<section>
+  <div class="wrap"><div class="prose">
+    <h2>The problem</h2>
+    <p>
+      ES futures don't trade as one continuous instrument. They trade as quarterly contracts that
+      expire in March, June, September, and December, and each is the actively traded contract for
+      only about three months. Any analysis longer than a quarter needs those contracts stitched into
+      one series.
+    </p>
+    <p>
+      Commercial data feeds do this for you, but they make the key decisions silently: when to switch
+      contracts, how to handle the price jump between them, and what to do with missing data. Those
+      choices flow directly into every level and statistic built on top. I wanted to make them
+      explicitly, understand their consequences, and be able to defend each one.
+    </p>
+  </div></div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>What I built</h2>
+    <p class="prose" style="font-size:17px; color:var(--ink-dim); margin-bottom:12px;">A Python pipeline that runs as a daily batch, in five stages:</p>
+    <ol class="steps prose">
+      <li><span><strong>Pulls</strong> one-minute bars for each individual contract from the Massive (formerly Polygon.io) API. It caches each contract locally and requests only the data it's missing, within a free-tier limit of five calls per minute shared across my other projects.</span></li>
+      <li><span><strong>Decides when to roll</strong> from one contract to the next, using actual trading volume rather than a calendar rule.</span></li>
+      <li><span><strong>Stitches</strong> the contracts into one continuous series, switching only at the start of a trading session, so no session's highs, lows, or volume ever mixes two contracts' prices.</span></li>
+      <li><span><strong>Repairs the timeline</strong> onto a complete one-minute grid, removing scheduled market closures and marking filled gaps so they can never distort a calculation.</span></li>
+      <li><span><strong>Publishes</strong> the series and daily reports to a shared PostgreSQL database and a synced folder. The reports include each day's value area (the price range where most of the day's volume traded) and session highs and lows.</span></li>
+    </ol>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <div class="prose">
+      <h2>The finding: the textbook roll date was wrong for my data</h2>
+      <p>
+        The standard answer to "when does ES roll?" is the CME roll date: the Thursday eight days
+        before expiration. My first versions rolled on a fixed calendar date close to it.
+      </p>
+      <p>
+        When I measured volume across all seven rolls from March 2025 to September 2026, the data said
+        otherwise. On roll Thursday, the incoming contract held only 3–10% of the day's volume, and no
+        more than 25% the next day. Rolling on the calendar would have built several days of every roll
+        week from a thinly traded contract, distorting exactly the volume-based levels the dataset
+        exists to produce.
+      </p>
+    </div>
+
+    <figure class="rollweek" aria-label="Roll week timeline">
+      <figcaption class="rollweek-head"><strong>A typical roll week</strong>, as measured across all seven rolls</figcaption>
+      <div class="days">
+        <div class="day mark-textbook">
+          <div class="dname">Thu</div>
+          <div class="dnote">New contract has 3–10% of volume</div>
+          <span class="tag">Textbook roll date</span>
+        </div>
+        <div class="day">
+          <div class="dname">Fri</div>
+          <div class="dnote">Still no more than 25%</div>
+        </div>
+        <div class="day weekend">
+          <div class="dname">Sat</div>
+          <div class="dnote">Market closed</div>
+        </div>
+        <div class="day weekend">
+          <div class="dname">Sun</div>
+          <div class="dnote">Monday's session opens at 3:00 p.m. PT</div>
+        </div>
+        <div class="day mark-actual">
+          <div class="dname">Mon</div>
+          <div class="dnote">New contract outtrades the old one</div>
+          <span class="tag">Actual roll</span>
+        </div>
+        <div class="day">
+          <div class="dname">Tue–Thu</div>
+          <div class="dnote">New contract is the front month</div>
+        </div>
+        <div class="day">
+          <div class="dname">Fri</div>
+          <div class="dnote">Old contract expires</div>
+        </div>
+      </div>
+      <p class="rollweek-foot">The series switches at the start of Monday's session, so no session ever mixes two contracts.</p>
+    </figure>
+
+    <div class="prose">
+      <p>
+        So I changed the rule. The series now rolls at the first session, on or after the CME date, in
+        which the new contract outtrades the old one. In every quarter, that crossover came on Monday of
+        expiration week, four days after the textbook date.
+      </p>
+      <p>
+        A finding that contradicts conventional wisdom deserves suspicion, so I checked it against an
+        independent source. TradingView's continuous ES contract rolled on the same session in both
+        quarters I checked, June and September 2026. That check also exposed a subtler problem: my first
+        volume-based version switched one session too late, which would have pushed one day's levels per
+        quarter off by the full price gap between contracts, roughly 50 to 68 points. Aligning with the
+        chart I actually trade on fixed it.
+      </p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>Decisions I can defend</h2>
+    <div class="rows">
+      <div class="row">
+        <h3>Real prices, not adjusted ones</h3>
+        <p>Most continuous series remove the price jump at each roll by adjusting history, but adjusted prices never actually traded. My levels have to line up with live charts, so the series keeps real prices and documents the jump at each seam instead.</p>
+      </div>
+      <div class="row">
+        <h3>No silent fixes</h3>
+        <p>Filling gaps can hide real data loss, so suspicious holes get investigated against the source before anything is patched. Two were genuine API gaps, about 1,100 and 650 missing minutes, and I backfilled them. A third looked identical but was real: the market closed early on January 9, 2025 for the national day of mourning for President Carter. That one stayed as it was.</p>
+      </div>
+      <div class="row">
+        <h3>Decisions that don't change history</h3>
+        <p>Once a roll is decided, new data can never move it. If the cached data is incomplete, the run stops with an error rather than write a truncated series.</p>
+      </div>
+      <div class="row">
+        <h3>Only finished sessions get reported</h3>
+        <p>A day's value area is published only after its session closes, so a partially formed profile never passes as final.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="wrap">
+    <h2>What it powers</h2>
+    <p class="prose" style="font-size:17px; color:var(--ink-dim); margin-bottom:12px;">This dataset is the shared foundation for the rest of my market analysis work.</p>
+    <div class="rows">
+      <div class="row">
+        <h3>ES Market Profile indicator</h3>
+        <p>A TradingView indicator I use every trading day, plotting the prior session's value area and key session levels.<span class="where">Private</span></p>
+      </div>
+      <div class="row">
+        <h3>Level interaction study</h3>
+        <p>Measures how price reacts at key levels: rejection, breakout, or chop. Each level is only used from the moment it was knowable in real time, so the results contain no hindsight.<a class="where" href="https://github.com/SilverTurtle1/ESFuturesData/blob/main/level_interactions.py" target="_blank" rel="noopener">level_interactions.py</a></p>
+      </div>
+      <div class="row">
+        <h3>Triple-barrier trade scorer</h3>
+        <p>Scores any trade idea by whether its profit target or its stop would have been hit first, giving every strategy an apples-to-apples comparison.<a class="where" href="https://github.com/SilverTurtle1/ESFuturesData/blob/main/triple_barrier.py" target="_blank" rel="noopener">triple_barrier.py</a></p>
+      </div>
+      <div class="row">
+        <h3>Strategy research</h3>
+        <p>Backtests of initial-balance breakouts, premarket setups, and weekly value-area behavior, all built on the same data.<a class="where" href="https://github.com/SilverTurtle1/ESFuturesData/blob/main/ib_breakout_test.py" target="_blank" rel="noopener">ib_breakout_test.py</a><a class="where" href="https://github.com/SilverTurtle1/ESFuturesData/blob/main/weekly_value_area.py" target="_blank" rel="noopener">weekly_value_area.py</a></p>
+      </div>
+      <div class="row">
+        <h3>Shared market database</h3>
+        <p>The PostgreSQL database this project writes to, also used by my equity scanner.<span class="where">Private</span></p>
+      </div>
+    </div>
+    <p class="note">The indicator, the rest of the strategy research, and the shared database and equity scanner code are private. I'm glad to walk through any of them in an interview.</p>
+  </div>
+</section>
+
+<section>
+  <div class="wrap"><div class="prose">
+    <h2>Technical documentation</h2>
+    <p>
+      The full methodology, covering roll logic, session definitions, gap handling, and the value-area
+      algorithm, is in the project's
+      <a href="https://github.com/SilverTurtle1/ESFuturesData/blob/main/docs/DATA_PIPELINE.md" target="_blank" rel="noopener">pipeline documentation</a>.
+    </p>
+  </div></div>
+</section>
+</main>
+
+<footer>JOSH MERRITT — BUILT FOR THE NEXT ROLE</footer>
+
+</body>
+</html>

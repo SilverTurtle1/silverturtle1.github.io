@@ -72,10 +72,10 @@
     border-top:1px solid var(--hairline); border-bottom:1px solid var(--hairline);
     margin-top:56px;
   }
-  .ledger div{
+  .ledger > div{
     padding:20px 24px; border-left:1px solid var(--hairline);
   }
-  .ledger div:first-child{border-left:none;}
+  .ledger > div:first-child{border-left:none;}
   .ledger .figure{font-family:var(--mono); font-size:22px; color:var(--gold);}
   .ledger .label{font-size:12px; color:var(--ink-faint); margin-top:6px; letter-spacing:0.02em;}
 
@@ -136,7 +136,7 @@
 
   @media (max-width:640px){
     .ledger{grid-template-columns:repeat(2,1fr);}
-    .ledger div:nth-child(3){border-left:none;}
+    .ledger > div:nth-child(3){border-left:none;}
     .project{grid-template-columns:1fr;}
     .skills-grid{grid-template-columns:1fr;}
     .tl-row{grid-template-columns:1fr;}
@@ -209,6 +209,22 @@
     <div class="section-head"><span class="section-num">02</span><h2>Selected projects</h2></div>
 
     <!-- EDIT ME: replace with your real projects, screenshots, and links -->
+    <div class="project">
+      <div class="project-tag">DATA</div>
+      <div>
+        <h3>ES Futures Data Pipeline</h3>
+        <p>
+          The dataset behind all of my market analysis: quarterly E-mini S&amp;P 500 futures
+          contracts stitched into one continuous 1-minute series, with daily value-area reports.
+          Measuring volume across seven contract rolls showed liquidity moves four days later than
+          the textbook roll date, so the pipeline rolls on actual volume instead.
+        </p>
+        <div class="stack"><span>Python</span><span>pandas</span><span>PostgreSQL</span><span>REST API</span></div>
+        <a class="project-link" href="es-futures-data.html">Read the case study →</a>
+        <a class="project-link" href="https://github.com/SilverTurtle1/ESFuturesData" target="_blank" rel="noopener" style="margin-left:18px;">View the code →</a>
+      </div>
+    </div>
+
     <div class="project">
       <div class="project-tag">DATA</div>
       <div>
