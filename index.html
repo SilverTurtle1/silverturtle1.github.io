@@ -236,13 +236,15 @@
     <div class="project">
       <div class="project-tag">DATA</div>
       <div>
-        <h3>FINRA Off-Exchange Transactions Dashboard</h3>
+        <h3>FINRA Off-Exchange Short Volume Dashboard</h3>
         <p>
-          A pipeline pulling FINRA short-interest and off-exchange transaction data on a
-          scheduled basis, with a Tableau front end for spotting shifts in positioning
-          across a watchlist.
+          A live web app that turns FINRA's daily off-exchange short-volume data, about 12,000
+          symbols a day, into an interactive treemap, with a daily panel that flags volume surges
+          and short-% shifts against each stock's own 20-day average. I also ran a five-method
+          statistical study of whether short-volume % predicts returns. It doesn't, and
+          knowing that was worth the work.
         </p>
-        <div class="stack"><span>Python</span><span>FINRA API</span><span>Tableau</span></div>
+        <div class="stack"><span>Python</span><span>Flask</span><span>PostgreSQL</span><span>D3.js</span><span>Statistical testing</span></div>
         <a class="project-link" href="https://ssdata.onrender.com/" target="_blank" rel="noopener">View live app →</a>
       </div>
     </div>
